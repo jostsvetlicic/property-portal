@@ -1,0 +1,222 @@
+@import "tailwindcss";
+
+/*
+ * ---------------------------------------------------------------------------
+ * THEME (Tailwind v4, CSS-first)
+ *
+ * The `--color-*` variables below are DEFAULTS. They are overridden at runtime
+ * by a <style> block injected from the central config / admin settings (see
+ * src/lib/theme.ts + src/app/layout.tsx). Because the @theme tokens reference
+ * these variables, every Tailwind color utility (bg-accent, text-cream, …)
+ * re-skins automatically when the variables change.
+ *
+ * Colors are stored as "R G B" triplets so `/<alpha>` opacity modifiers work.
+ * ---------------------------------------------------------------------------
+ */
+:root {
+  --color-base: 20 17 13;
+  --color-charcoal: 30 26 19;
+  --color-cream: 245 241 232;
+  --color-accent: 201 162 75;
+  --color-accent-soft: 220 189 122;
+  --color-muted: 138 129 117;
+  --radius-base: 1rem;
+}
+
+@theme inline {
+  --color-base: rgb(var(--color-base));
+  --color-charcoal: rgb(var(--color-charcoal));
+  --color-cream: rgb(var(--color-cream));
+  --color-accent: rgb(var(--color-accent));
+  --color-accent-soft: rgb(var(--color-accent-soft));
+  --color-muted: rgb(var(--color-muted));
+
+  --font-display: var(--font-display), Georgia, "Times New Roman", serif;
+  --font-body: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-base: var(--radius-base);
+
+  --default-font-family: var(--font-body);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: rgb(var(--color-base));
+  color: rgb(var(--color-cream));
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Editorial display type for headings. */
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+/* ---------------------------------------------------------------------------
+ * Micro-interactions
+ * ------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Hero entrance: elements rise + fade in on first paint (staggered via
+ * inline animation-delay). Distinct from .reveal, which is scroll-triggered. */
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.hero-rise {
+  opacity: 0;
+  animation: hero-rise 1.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-rise {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
+/* Slow, continuous drift for the hero image — a calm ambient motion that
+ * complements the scroll parallax. */
+@keyframes hero-drift {
+  from {
+    transform: scale(1.12) translateY(0);
+  }
+  to {
+    transform: scale(1.12) translateY(-2.5%);
+  }
+}
+
+/* Gentle image zoom on hover, used by cards and galleries. */
+.img-zoom {
+  overflow: hidden;
+}
+.img-zoom img {
+  transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.img-zoom:hover img {
+  transform: scale(1.06);
+}
+
+/* Smooth crossfade + settle for gallery slide changes. The active slide is
+ * remounted (keyed by index) so this plays on every navigation. */
+@keyframes gallery-fade {
+  from {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.gallery-fade {
+  animation: gallery-fade 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gallery-fade {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Scroll-FX (GSAP + ScrollTrigger, orchestrated by <ScrollFX>)
+ *
+ * Elements opt in with data attributes; the global controller animates them:
+ *   data-fx            → fade + slide up (default)
+ *   data-fx="left"     → fade + slide in from the left
+ *   data-fx="right"    → fade + slide in from the right
+ *   data-fx="scale"    → fade + gentle scale-up
+ *   data-fx="clip"     → image clip-path wipe + slow scale (cinematic reveal)
+ *   data-parallax      → background drifts slower than the scroll (parallax)
+ *   data-magnetic      → button eases toward the cursor with a soft gold glow
+ *
+ * The `.fx-ready` gate (added to <html> by the controller before first paint)
+ * hides opt-in elements only when the JS engine is live — so with JS disabled,
+ * content stays visible. Reduced-motion forces everything visible + static.
+ * ------------------------------------------------------------------------- */
+.fx-ready [data-fx] {
+  opacity: 0;
+}
+[data-fx] {
+  will-change: opacity, transform;
+}
+[data-fx="clip"] {
+  clip-path: inset(0 0 100% 0);
+}
+[data-parallax] {
+  will-change: transform;
+}
+
+/* Magnetic button: soft champagne-gold glow that blooms on hover. The JS
+ * controller adds the cursor-follow transform; the glow is pure CSS. */
+[data-magnetic] {
+  will-change: transform;
+}
+.btn-glow {
+  position: relative;
+  /* transform is owned by the magnetic JS (gsap.quickTo) — only ease the glow
+   * here so the two easings don't compound. */
+  transition: box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-glow:hover {
+  box-shadow:
+    0 0 0 1px rgb(var(--color-accent) / 0.35),
+    0 10px 40px -6px rgb(var(--color-accent) / 0.5),
+    0 0 60px -10px rgb(var(--color-accent) / 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-ready [data-fx],
+  [data-fx],
+  [data-fx="clip"] {
+    opacity: 1 !important;
+    transform: none !important;
+    clip-path: none !important;
+  }
+  [data-parallax] {
+    transform: none !important;
+  }
+}
+
+/* Thin luxe divider. */
+.rule {
+  height: 1px;
+  background: rgb(var(--color-cream) / 0.14);
+}
+
+/* Letter-spaced eyebrow/label. */
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+/* Custom scrollbar for a more premium feel on desktop. */
+@media (pointer: fine) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--color-accent) / 0.5) transparent;
+  }
+}
+
+/* Leaflet map: neutralize default styles and round corners. */
+.leaflet-container {
+  background: rgb(var(--color-charcoal)) !important;
+  font-family: var(--font-body), sans-serif !important;
+}

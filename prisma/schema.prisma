@@ -1,0 +1,142 @@
+// Prisma schema for the estate platform.
+//
+// LOCAL DEV:  SQLite (zero-setup, file-based).
+// PRODUCTION: switch `provider` to "postgresql" and point DATABASE_URL at your
+//             Postgres instance (e.g. Vercel Postgres / Neon). See README.
+//
+// Note: SQLite has no native enum or array types, so `type`/`status` are plain
+// strings validated in app code (see src/types), and `features` is a JSON
+// string. On Postgres you may migrate `features` to `String[]` if desired.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Property {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  reference   String   @unique // auto-generated public listing ref, e.g. PP-100234
+  title       String
+  price       Int // whole euros (total for sale, per month for rent)
+  currency    String   @default("EUR")
+  listingType String   @default("sale") // sale | rent
+  location    String
+  lat         Float?
+  lng         Float?
+  type        String // Apartment | House | Villa | Land | Commercial | Office | Garage | Weekend House
+  status      String   @default("available") // available | reserved | sold
+  bedrooms    Int
+  bathrooms   Int
+  area        Int // square meters (living / usable area)
+  landSize    Int? // plot size in square meters (land / houses)
+  yearBuilt   Int? // year of construction
+  floor       Int? // floor the unit is on (apartments / offices)
+  totalFloors Int? // total floors in the building
+  condition   String? // New build | Renovated | Good | Needs renovation
+  energyRating String? // A | B | C | D | E | F | G  (EU energy certificate)
+  parking     Boolean  @default(false)
+  elevator    Boolean  @default(false)
+  balcony     Boolean  @default(false) // balcony or terrace
+  description String
+  narrative   String? // boutique-mode evocative story text
+  videoUrl    String? // virtual tour embed (YouTube / Vimeo / 360)
+  metaTitle       String? // SEO <title> override
+  metaDescription String? // SEO meta description override
+  features    String   @default("[]") // JSON-encoded string[]
+  featured    Boolean  @default(false)
+  views       Int      @default(0) // public detail-page view counter
+
+  images    Image[]
+  agent     Agent?    @relation(fields: [agentId], references: [id])
+  agentId   String?
+  inquiries Inquiry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([listingType])
+  @@index([featured])
+}
+
+model Image {
+  id         String   @id @default(cuid())
+  url        String // Vercel Blob URL
+  alt        String?
+  order      Int      @default(0)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  propertyId String
+
+  @@index([propertyId])
+}
+
+model Agent {
+  id         String     @id @default(cuid())
+  name       String
+  role       String
+  email      String
+  phone      String?
+  photoUrl   String?
+  bio        String?
+  properties Property[]
+  inquiries  Inquiry[]
+  createdAt  DateTime   @default(now())
+}
+
+model Inquiry {
+  id         String    @id @default(cuid())
+  name       String
+  email      String
+  phone      String?
+  message    String
+  source     String    @default("property") // property | contact
+  status     String    @default("new") // new | contacted | closed
+  property   Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  propertyId String?
+  agent      Agent?    @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  agentId    String?
+  read       Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([status])
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  locale    String   @default("en")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// Single-row table (id = 1) holding admin-editable overrides of the config
+// file. Merged over agency.config.ts defaults at runtime (src/lib/settings.ts).
+model Settings {
+  id          Int      @id @default(1)
+  mode        String // portal | boutique
+  name        String
+  logoText    String
+  tagline     String?
+  accentColor String
+  baseColor   String
+  creamColor  String
+  email       String?
+  phone       String?
+  address     String?
+  updatedAt   DateTime @updatedAt
+}
